@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-silver-100: #f3f4f6;
+  --color-silver-200: #e5e7eb;
+  --color-silver-300: #d1d5db;
+  --color-silver-400: #9ca3af;
+  --color-silver-500: #6b7280;
+  
+  --color-dark-900: #050505;
+  --color-dark-800: #121212;
+  --color-dark-700: #1a1a1a;
+  --color-dark-600: #262626;
+}
+
+body {
+  @apply bg-dark-900 text-silver-200 font-sans antialiased selection:bg-silver-400 selection:text-dark-900;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-dark-900);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-dark-600);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-dark-500);
+}
+
+/* Button Effects */
+.btn-effect {
+  @apply relative overflow-hidden transition-all duration-300 ease-out;
+}
+.btn-effect::after {
+  content: '';
+  @apply absolute inset-0 bg-white/10 translate-y-full transition-transform duration-300 ease-out;
+}
+.btn-effect:hover::after {
+  @apply translate-y-0;
+}
