@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import { useStore } from '../store/useStore';
 import { formatCurrency } from '../lib/utils';
 
@@ -18,19 +17,10 @@ export function useSalesForecast() {
 
   const generateForecast = useMemo(() => {
     return async () => {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
-      
-      if (!apiKey) {
-        setError('API Key do Gemini não configurada. Configure VITE_GEMINI_API_KEY no arquivo .env');
-        return;
-      }
-
       setLoading(true);
       setError(null);
 
       try {
-        const ai = new GoogleGenAI({ apiKey });
-        
         const last30Days = sales
           .filter(s => new Date(s.date) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
           .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -38,47 +28,40 @@ export function useSalesForecast() {
         const monthlyTotal = last30Days.reduce((acc, s) => acc + s.profit, 0);
         const avgDaily = monthlyTotal / 30;
         
-        const events = [...new Set(sales.map(s => s.event))].slice(0, 5);
+        const last7Days = sales
+          .filter(s => new Date(s.date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+          .reduce((acc, s) => acc + s.profit, 0);
+        
+        const prev7Days = sales
+          .filter(s => {
+            const date = new Date(s.date);
+            const now = new Date();
+            return date > new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000) && date <= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          })
+          .reduce((acc, s) => acc + s.profit, 0);
+
+        const trend = last7Days > prev7Days ? 'up' : last7Days < prev7Days ? 'down' : 'stable';
+        
+        const growthRate = prev7Days > 0 ? ((last7Days - prev7Days) / prev7Days) : 0;
+        const predictedProfit = Math.max(0, avgDaily * 30 * (1 + growthRate * 0.5));
+        const confidence = Math.min(95, 50 + Math.min(45, Math.abs(growthRate * 100)));
+
         const onlineCount = sales.filter(s => s.isOnline).length;
         const offlineCount = sales.filter(s => !s.isOnline).length;
+        const factors = [
+          onlineCount > offlineCount ? 'Alta participação de vendas online' : 'Alta participação de vendas físicas',
+          last7Days > avgDaily * 7 ? 'Tendência de crescimento recente' : 'Estabilidade de vendas',
+          monthlyTotal > 0 ? 'Lucro mensal positivo' : 'Necessário aumentar vendas',
+        ];
 
-        const prompt = `
-Com base nos seguintes dados de vendas (vendas dos últimos 30 dias):
-- Lucro total: R$ ${monthlyTotal.toFixed(2)}
-- Média diária de lucro: R$ ${avgDaily.toFixed(2)}
-- Total de vendas: ${sales.length}
-- Vendas online: ${onlineCount}
-- Vendas físicas: ${offlineCount}
-- Principais eventos: ${events.join(', ')}
-
-Faça uma previsão para o próximo mês (próximos 30 dias). Considere sazonalidade e tendências.
-
-Responda APENAS em JSON válido com este formato exato:
-{
-  "predictedProfit": numero,
-  "confidence": numero entre 0 e 100,
-  "trend": "up" ou "down" ou "stable",
-  "factors": [lista de 3 fatores que influenciam]
-}`;
-
-        const result = await ai.models.generateContent({
-          model: 'gemini-2.0-flash',
-          contents: prompt,
+        setForecast({
+          predictedProfit: Math.round(predictedProfit),
+          confidence: Math.round(confidence),
+          trend,
+          factors,
         });
-        const response = result.text;
-        
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          setForecast({
-            predictedProfit: parsed.predictedProfit,
-            confidence: parsed.confidence,
-            trend: parsed.trend,
-            factors: parsed.factors || [],
-          });
-        }
       } catch (err) {
-        setError('Erro ao gerar previsão. Verifique a API Key.');
+        setError('Erro ao gerar previsão.');
         console.error(err);
       } finally {
         setLoading(false);
@@ -95,13 +78,13 @@ export default function ForecastWidget() {
   return (
     <div className="bg-dark-800 border border-dark-600 rounded-2xl p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-silver-200">Previsão de Lucro (IA)</h3>
+        <h3 className="text-lg font-semibold text-silver-200">Previsão de Lucro</h3>
         <button
           onClick={generateForecast}
           disabled={loading}
           className="text-sm text-blue-400 hover:text-blue-300 disabled:opacity-50"
         >
-          {loading ? 'Gerando...' : 'Atualizar'}
+          {loading ? 'Calculando...' : 'Atualizar'}
         </button>
       </div>
 
@@ -151,7 +134,7 @@ export default function ForecastWidget() {
 
       {!forecast && !error && !loading && (
         <p className="text-silver-500 text-sm">
-          Clique em "Atualizar" para gerar uma previsão de lucro baseada em IA.
+          Clique em "Atualizar" para gerar uma previsão de lucro baseada nos seus dados.
         </p>
       )}
     </div>

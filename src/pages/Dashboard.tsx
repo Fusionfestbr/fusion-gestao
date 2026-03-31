@@ -79,8 +79,8 @@ export default function Dashboard() {
       .sort((a, b) => b.total - a.total)
       .slice(0, 5);
 
-    const weeklyProfitGoalProgress = Math.min((metrics.weeklyProfit / weeklyProfitGoal) * 100, 100);
-    const dailyProfit = metrics.weeklyData[6]?.lucro || 0;
+    const weeklyProfitGoalProgress = Math.min((weeklyProfit / weeklyProfitGoal) * 100, 100);
+    const dailyProfit = weeklyData[6]?.lucro || 0;
     const dailyProfitGoalProgress = Math.min((dailyProfit / dailyProfitGoal) * 100, 100);
 
     return { monthlyTotal, monthlyProfit, goalProgress, weeklyData, weeklyTotal, weeklyProfit, monthlyData, topCustomers, topEvents, weeklyProfitGoalProgress, dailyProfit, dailyProfitGoalProgress };
