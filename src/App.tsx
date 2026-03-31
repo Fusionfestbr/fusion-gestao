@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { StoreProvider } from './store/useStore';
+import { ThemeProvider } from './lib/theme';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -9,16 +10,18 @@ import Configuracoes from './pages/Configuracoes';
 
 export default function App() {
   return (
-    <StoreProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<Layout><Dashboard /></Layout>} />
-          <Route path="/lancamentos" element={<Layout><Lancamentos /></Layout>} />
-          <Route path="/historico" element={<Layout><Historico /></Layout>} />
-          <Route path="/configuracoes" element={<Layout><Configuracoes /></Layout>} />
-        </Routes>
-      </BrowserRouter>
-    </StoreProvider>
+    <ThemeProvider>
+      <StoreProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Layout><Dashboard /></Layout>} />
+            <Route path="/lancamentos" element={<Layout><Lancamentos /></Layout>} />
+            <Route path="/historico" element={<Layout><Historico /></Layout>} />
+            <Route path="/configuracoes" element={<Layout><Configuracoes /></Layout>} />
+          </Routes>
+        </BrowserRouter>
+      </StoreProvider>
+    </ThemeProvider>
   );
 }

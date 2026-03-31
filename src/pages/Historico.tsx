@@ -1,16 +1,20 @@
 import { useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Search, Filter, Globe, Store, Trash2 } from 'lucide-react';
+import { Search, Filter, Globe, Store, Trash2, Edit2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency } from '../lib/utils';
+import { Sale } from '../store/mockData';
 
 export default function Historico() {
-  const { sales, deleteSale } = useStore();
+  const { sales, deleteSale, updateSale } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [editForm, setEditForm] = useState({ date: '', isOnline: false, event: '', customer: '', purchaseValue: 0, saleValue: 0, type: 'Venda Direta' as const });
+  const [isSaving, setIsSaving] = useState(false);
 
   const filteredSales = useMemo(() => {
     return sales.filter(sale => {
@@ -160,13 +164,33 @@ export default function Historico() {
                             </button>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => setDeletingId(sale.id)}
-                            className="p-2 text-silver-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                            title="Excluir lançamento"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => {
+                                setEditingSale(sale);
+                                setEditForm({
+                                  date: sale.date.split('T')[0],
+                                  isOnline: sale.isOnline,
+                                  event: sale.event,
+                                  customer: sale.customer,
+                                  purchaseValue: sale.purchaseValue,
+                                  saleValue: sale.saleValue,
+                                  type: sale.type,
+                                });
+                              }}
+                              className="p-2 text-silver-500 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                              title="Editar lançamento"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              onClick={() => setDeletingId(sale.id)}
+                              className="p-2 text-silver-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                              title="Excluir lançamento"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -234,6 +258,122 @@ export default function Historico() {
         </div>
 
       </div>
+
+      {editingSale && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-800 border border-dark-600 rounded-2xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold text-silver-100 mb-6">Editar Lançamento</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-silver-300 mb-2">Data</label>
+                <input
+                  type="date"
+                  value={editForm.date}
+                  onChange={e => setEditForm(p => ({ ...p, date: e.target.value }))}
+                  className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 text-silver-200 focus:outline-none focus:border-silver-500"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditForm(p => ({ ...p, isOnline: false, type: 'Venda Direta' }))}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${!editForm.isOnline ? 'bg-dark-700 text-silver-100' : 'text-silver-500 bg-dark-900'}`}
+                >
+                  Venda Física
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditForm(p => ({ ...p, isOnline: true, type: 'Venda Online' }))}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${editForm.isOnline ? 'bg-dark-700 text-silver-100' : 'text-silver-500 bg-dark-900'}`}
+                >
+                  Venda Online
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-silver-300 mb-2">Evento</label>
+                <input
+                  type="text"
+                  value={editForm.event}
+                  onChange={e => setEditForm(p => ({ ...p, event: e.target.value }))}
+                  className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 text-silver-200 focus:outline-none focus:border-silver-500"
+                />
+              </div>
+
+              {editForm.isOnline && (
+                <div>
+                  <label className="block text-sm font-medium text-silver-300 mb-2">Cliente</label>
+                  <input
+                    type="text"
+                    value={editForm.customer}
+                    onChange={e => setEditForm(p => ({ ...p, customer: e.target.value }))}
+                    className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 text-silver-200 focus:outline-none focus:border-silver-500"
+                  />
+                </div>
+              )}
+
+              {editForm.isOnline && (
+                <div>
+                  <label className="block text-sm font-medium text-silver-300 mb-2">Valor de Compra</label>
+                  <input
+                    type="number"
+                    value={editForm.purchaseValue}
+                    onChange={e => setEditForm(p => ({ ...p, purchaseValue: Number(e.target.value) }))}
+                    className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 text-silver-200 focus:outline-none focus:border-silver-500"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-silver-300 mb-2">Valor de Venda</label>
+                <input
+                  type="number"
+                  value={editForm.saleValue}
+                  onChange={e => setEditForm(p => ({ ...p, saleValue: Number(e.target.value) }))}
+                  className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 text-silver-200 focus:outline-none focus:border-silver-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setEditingSale(null)}
+                className="flex-1 py-3 rounded-xl text-silver-300 hover:bg-dark-700 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  if (!editingSale) return;
+                  setIsSaving(true);
+                  try {
+                    await updateSale(editingSale.id, {
+                      date: new Date(editForm.date).toISOString(),
+                      isOnline: editForm.isOnline,
+                      event: editForm.event,
+                      customer: editForm.isOnline ? editForm.customer : 'Venda Física',
+                      purchaseValue: editForm.isOnline ? editForm.purchaseValue : 0,
+                      saleValue: editForm.saleValue,
+                      type: editForm.type,
+                    });
+                    setEditingSale(null);
+                  } catch (err) {
+                    console.error('Erro ao editar:', err);
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+                disabled={isSaving}
+                className="flex-1 py-3 bg-silver-200 text-dark-900 font-semibold rounded-xl hover:bg-white transition-colors disabled:opacity-50"
+              >
+                {isSaving ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

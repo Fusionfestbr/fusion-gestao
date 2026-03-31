@@ -1,13 +1,15 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, History, LogOut, Menu, X, Activity, Settings } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, History, LogOut, Menu, X, Activity, Settings, Sun, Moon } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { cn } from '../lib/utils';
+import { useTheme } from '../lib/theme';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useStore();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -43,6 +45,16 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="p-6 hidden md:flex items-center gap-3 text-silver-200 font-bold text-2xl tracking-tight">
           <Activity className="text-silver-400" size={28} />
           <span>Fusion Gestão</span>
+        </div>
+
+        <div className="px-4 py-2">
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-silver-400 hover:bg-dark-700 hover:text-silver-200 transition-all w-full"
+          >
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            <span className="font-medium">{theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}</span>
+          </button>
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-2">

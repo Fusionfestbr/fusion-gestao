@@ -16,8 +16,61 @@
   --color-dark-600: #262626;
 }
 
+.light {
+  --color-silver-100: #111827;
+  --color-silver-200: #1f2937;
+  --color-silver-300: #374151;
+  --color-silver-400: #6b7280;
+  --color-silver-500: #9ca3af;
+  
+  --color-dark-900: #f9fafb;
+  --color-dark-800: #f3f4f6;
+  --color-dark-700: #e5e7eb;
+  --color-dark-600: #d1d5db;
+}
+
 body {
   @apply bg-dark-900 text-silver-200 font-sans antialiased selection:bg-silver-400 selection:text-dark-900;
+}
+
+.light body {
+  @apply bg-gray-100 text-gray-900;
+}
+
+.light .bg-dark-800 {
+  @apply bg-white;
+}
+
+.light .bg-dark-900 {
+  @apply bg-gray-50;
+}
+
+.light .bg-dark-700 {
+  @apply bg-gray-200;
+}
+
+.light .bg-dark-900\/50 {
+  @apply bg-gray-200/50;
+}
+
+.light .border-dark-600 {
+  @apply border-gray-300;
+}
+
+.light .border-dark-700 {
+  @apply border-gray-400;
+}
+
+.light input, .light select {
+  @apply bg-gray-100 border-gray-300 text-gray-800;
+}
+
+.light ::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+.light ::-webkit-scrollbar-thumb {
+  background: #d1d5db;
 }
 
 /* Custom Scrollbar */

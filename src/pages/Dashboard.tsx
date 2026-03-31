@@ -1,24 +1,26 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, AreaChart, Area
 } from 'recharts';
-import { format, subDays, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, isWithinInterval, parseISO, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { TrendingUp, Users, Calendar, Target, Award } from 'lucide-react';
+import { TrendingUp, Users, Calendar, Target, Award, DollarSign, Download, FileText, FileSpreadsheet } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatCurrency } from '../lib/utils';
+import { exportToPDF, exportToExcel } from '../lib/exportUtils';
+import ForecastWidget from '../lib/forecast';
 
 export default function Dashboard() {
-  const { sales, monthlyGoal } = useStore();
+  const { sales, monthlyProfitGoal, weeklyProfitGoal, dailyProfitGoal } = useStore();
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const metrics = useMemo(() => {
     const now = new Date();
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
 
-    // Monthly Sales
     const monthlySales = sales.filter(s =>
       isWithinInterval(parseISO(s.date), { start: monthStart, end: monthEnd })
     );
@@ -26,10 +28,8 @@ export default function Dashboard() {
     const monthlyTotal = monthlySales.reduce((acc, s) => acc + s.saleValue, 0);
     const monthlyProfit = monthlySales.reduce((acc, s) => acc + s.profit, 0);
 
-    // Goal Progress
-    const goalProgress = Math.min((monthlyTotal / monthlyGoal) * 100, 100);
+    const goalProgress = Math.min((monthlyProfit / monthlyProfitGoal) * 100, 100);
 
-    // Weekly Chart Data (last 7 days)
     const weeklyData = Array.from({ length: 7 }).map((_, i) => {
       const date = subDays(now, 6 - i);
       const daySales = sales.filter(s => format(parseISO(s.date), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
@@ -79,14 +79,47 @@ export default function Dashboard() {
       .sort((a, b) => b.total - a.total)
       .slice(0, 5);
 
-    return { monthlyTotal, monthlyProfit, goalProgress, weeklyData, weeklyTotal, weeklyProfit, monthlyData, topCustomers, topEvents };
-  }, [sales, monthlyGoal]);
+    const weeklyProfitGoalProgress = Math.min((metrics.weeklyProfit / weeklyProfitGoal) * 100, 100);
+    const dailyProfit = metrics.weeklyData[6]?.lucro || 0;
+    const dailyProfitGoalProgress = Math.min((dailyProfit / dailyProfitGoal) * 100, 100);
+
+    return { monthlyTotal, monthlyProfit, goalProgress, weeklyData, weeklyTotal, weeklyProfit, monthlyData, topCustomers, topEvents, weeklyProfitGoalProgress, dailyProfit, dailyProfitGoalProgress };
+  }, [sales, monthlyProfitGoal, weeklyProfitGoal, dailyProfitGoal]);
 
   return (
     <div className="space-y-6">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-silver-100 tracking-tight">Painel de Controle</h1>
-        <p className="text-silver-400 mt-1">Visão geral do seu negócio</p>
+      <header className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-silver-100 tracking-tight">Painel de Controle</h1>
+          <p className="text-silver-400 mt-1">Visão geral do seu negócio</p>
+        </div>
+        <div className="relative">
+          <button
+            onClick={() => setShowExportMenu(!showExportMenu)}
+            className="flex items-center gap-2 px-4 py-2 bg-dark-800 border border-dark-600 rounded-xl text-silver-300 hover:bg-dark-700 transition-colors"
+          >
+            <Download size={18} />
+            <span>Exportar</span>
+          </button>
+          {showExportMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-dark-800 border border-dark-600 rounded-xl shadow-xl z-10 overflow-hidden">
+              <button
+                onClick={() => { exportToPDF(sales, metrics.monthlyProfit, monthlyProfitGoal); setShowExportMenu(false); }}
+                className="w-full flex items-center gap-2 px-4 py-3 text-left text-silver-300 hover:bg-dark-700 transition-colors"
+              >
+                <FileText size={18} />
+                <span>Exportar PDF</span>
+              </button>
+              <button
+                onClick={() => { exportToExcel(sales, metrics.monthlyProfit, monthlyProfitGoal); setShowExportMenu(false); }}
+                className="w-full flex items-center gap-2 px-4 py-3 text-left text-silver-300 hover:bg-dark-700 transition-colors"
+              >
+                <FileSpreadsheet size={18} />
+                <span>Exportar Excel</span>
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       {/* KPI Cards */}
@@ -125,22 +158,64 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-3 bg-dark-800 border border-dark-600 rounded-2xl p-6">
+        <div className="bg-dark-800 border border-dark-600 rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-silver-400 font-medium">Meta Mensal</h3>
+            <h3 className="text-silver-400 font-medium">Meta de Lucro Diária</h3>
+            <div className="p-2 bg-dark-700 rounded-lg"><DollarSign size={20} className="text-silver-200" /></div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-silver-300">{formatCurrency(metrics.dailyProfit)}</span>
+              <span className="text-silver-500">de {formatCurrency(dailyProfitGoal)}</span>
+            </div>
+            <div className="h-2 bg-dark-900 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${metrics.dailyProfitGoalProgress}%` }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+                className="h-full bg-emerald-500 rounded-full"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-800 border border-dark-600 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-silver-400 font-medium">Meta de Lucro Semanal</h3>
+            <div className="p-2 bg-dark-700 rounded-lg"><TrendingUp size={20} className="text-silver-200" /></div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-silver-300">{formatCurrency(metrics.weeklyProfit)}</span>
+              <span className="text-silver-500">de {formatCurrency(weeklyProfitGoal)}</span>
+            </div>
+            <div className="h-2 bg-dark-900 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${metrics.weeklyProfitGoalProgress}%` }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+                className="h-full bg-blue-500 rounded-full"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-dark-800 border border-dark-600 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-silver-400 font-medium">Meta de Lucro Mensal</h3>
             <div className="p-2 bg-dark-700 rounded-lg"><Target size={20} className="text-silver-200" /></div>
           </div>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-silver-300">{formatCurrency(metrics.monthlyTotal)}</span>
-              <span className="text-silver-500">de {formatCurrency(monthlyGoal)}</span>
+              <span className="text-silver-300">{formatCurrency(metrics.monthlyProfit)}</span>
+              <span className="text-silver-500">de {formatCurrency(monthlyProfitGoal)}</span>
             </div>
             <div className="h-2 bg-dark-900 rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${metrics.goalProgress}%` }}
                 transition={{ duration: 1.5, ease: "easeOut" }}
-                className="h-full bg-silver-300 rounded-full"
+                className="h-full bg-purple-500 rounded-full"
               />
             </div>
           </div>
@@ -265,6 +340,10 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ForecastWidget />
       </div>
     </div>
   );
